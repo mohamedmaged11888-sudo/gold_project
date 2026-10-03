@@ -1,0 +1,4323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>BIW Body Quality Analysis</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<style>
+:root{
+  --bg:#0b0d0e;
+  --panel:#111416;
+  --panel-2:#15191b;
+  --panel-3:#1b2022;
+  --line:rgba(255,255,255,.08);
+  --text:#f4f0e8;
+  --muted:#9c9b96;
+  --gold:#d5a451;
+  --gold-2:#f0c36b;
+  --gold-soft:rgba(213,164,81,.14);
+  --danger:#ff315f;
+  --high:#ffb000;
+  --green:#7eae78;
+  --blue:#6f9db8;
+  --shadow:0 22px 60px rgba(0,0,0,.38);
+  --radius:18px;
+}
+
+*{box-sizing:border-box}
+
+html{scroll-behavior:smooth}
+
+body{
+  margin:0;
+  background:
+    radial-gradient(circle at 82% 6%,rgba(213,164,81,.09),transparent 25%),
+    radial-gradient(circle at 12% 35%,rgba(213,164,81,.045),transparent 28%),
+    var(--bg);
+  color:var(--text);
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  min-height:100vh;
+}
+
+button,input,select{font:inherit}
+button{cursor:pointer}
+
+.app{
+  display:grid;
+  grid-template-columns:250px 1fr;
+  min-height:100vh;
+}
+
+/* SIDEBAR */
+
+.sidebar{
+  position:fixed;
+  inset:0 auto 0 0;
+  width:250px;
+  padding:22px 16px;
+  border-right:1px solid var(--line);
+  background:rgba(11,13,14,.88);
+  backdrop-filter:blur(18px);
+  z-index:20;
+  display:flex;
+  flex-direction:column;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:8px 10px 24px;
+}
+
+.brand-mark{
+  width:40px;
+  height:40px;
+  border-radius:12px;
+  display:grid;
+  place-items:center;
+  color:#0d0f10;
+  font-weight:900;
+  background:linear-gradient(145deg,var(--gold-2),var(--gold));
+  box-shadow:0 8px 24px rgba(213,164,81,.18);
+}
+
+.brand-text strong{
+  display:block;
+  font-size:14px;
+  letter-spacing:.14em
+}
+
+.brand-text span{
+  display:block;
+  color:var(--muted);
+  font-size:10px;
+  margin-top:3px
+}
+
+.nav-title{
+  color:#6f706c;
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.18em;
+  padding:10px 12px
+}
+
+.nav{
+  display:flex;
+  flex-direction:column;
+  gap:5px
+}
+
+.nav button{
+  border:0;
+  background:transparent;
+  color:#a9aaa6;
+  padding:11px 12px;
+  border-radius:11px;
+  text-align:left;
+  transition:.2s ease
+}
+
+.nav button:hover,
+.nav button.active{
+  background:var(--gold-soft);
+  color:var(--gold-2)
+}
+
+.sidebar-bottom{
+  margin-top:auto;
+  padding:14px 10px;
+  border-top:1px solid var(--line)
+}
+
+.status{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:#8d8f8b;
+  font-size:11px
+}
+
+.dot{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:var(--green);
+  box-shadow:0 0 10px rgba(126,174,120,.7)
+}
+
+/* MAIN */
+
+main{
+  grid-column:2;
+  padding:26px 32px 50px;
+  max-width:1800px;
+  width:100%;
+  margin:0 auto
+}
+
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:18px;
+  margin-bottom:24px
+}
+
+.eyebrow{
+  color:var(--gold);
+  font-size:10px;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  margin-bottom:8px
+}
+
+h1{
+  margin:0;
+  font-size:30px;
+  line-height:1.05;
+  letter-spacing:-.04em
+}
+
+.subtitle{
+  margin:8px 0 0;
+  color:var(--muted);
+  font-size:13px
+}
+
+.top-actions{
+  display:flex;
+  gap:9px;
+  flex-wrap:wrap;
+  justify-content:flex-end
+}
+
+.btn{
+  border:1px solid var(--line);
+  background:var(--panel);
+  color:var(--text);
+  border-radius:11px;
+  padding:10px 13px;
+  transition:.2s ease
+}
+
+.btn:hover{
+  border-color:rgba(213,164,81,.45);
+  transform:translateY(-1px)
+}
+
+.btn.gold{
+  background:linear-gradient(145deg,#e1b65e,#b8873b);
+  color:#0b0d0e;
+  border-color:transparent;
+  font-weight:800
+}
+
+.hidden{display:none!important}
+
+/* FILTERS */
+
+.filters{
+  background:linear-gradient(145deg,rgba(255,255,255,.035),rgba(255,255,255,.018));
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:16px;
+  box-shadow:var(--shadow);
+  margin-bottom:18px
+}
+
+.filter-grid{
+  display:grid;
+  grid-template-columns:repeat(6,minmax(120px,1fr));
+  gap:10px
+}
+
+.field label{
+  display:block;
+  color:#858782;
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.12em;
+  margin:0 0 7px 2px
+}
+
+.field select,
+.field input{
+  width:100%;
+  background:#0d1011;
+  color:var(--text);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:10px 11px;
+  outline:none
+}
+
+.field select:focus,
+.field input:focus{
+  border-color:rgba(213,164,81,.55);
+  box-shadow:0 0 0 3px rgba(213,164,81,.07)
+}
+
+.filter-actions{
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+  margin-top:12px
+}
+
+/* KPI */
+
+.kpis{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:12px;
+  margin-bottom:18px
+}
+
+.kpi{
+  position:relative;
+  overflow:hidden;
+  background:linear-gradient(145deg,#141718,#0f1213);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:17px;
+  min-height:112px;
+  box-shadow:var(--shadow);
+  transition:.2s ease
+}
+
+.kpi:hover{
+  transform:translateY(-2px);
+  border-color:rgba(213,164,81,.25)
+}
+
+.kpi::after{
+  content:"";
+  position:absolute;
+  width:90px;
+  height:90px;
+  right:-38px;
+  bottom:-42px;
+  border-radius:50%;
+  border:1px solid rgba(213,164,81,.16);
+  box-shadow:0 0 0 18px rgba(213,164,81,.025)
+}
+
+.kpi-label{
+  color:#858782;
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.14em
+}
+
+.kpi-value{
+  margin-top:13px;
+  font-size:28px;
+  font-weight:800;
+  letter-spacing:-.04em
+}
+
+.kpi-sub{
+  color:#767874;
+  font-size:10px;
+  margin-top:4px
+}
+
+.gold-text{color:var(--gold-2)}
+
+/* SECTIONS */
+
+.section{
+  margin-top:18px;
+  scroll-margin-top:20px
+}
+
+.section-title{
+  display:flex;
+  justify-content:space-between;
+  align-items:end;
+  margin:0 0 10px
+}
+
+.section-title h2{
+  margin:0;
+  font-size:15px;
+  letter-spacing:-.01em
+}
+
+.section-title span{
+  color:#6f716d;
+  font-size:10px
+}
+
+.grid-2{
+  display:grid;
+  grid-template-columns:1.35fr 1fr;
+  gap:14px
+}
+
+.grid-3{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:14px
+}
+
+.card{
+  background:linear-gradient(145deg,rgba(23,27,29,.96),rgba(14,17,18,.96));
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:16px;
+  box-shadow:var(--shadow);
+  min-width:0;
+  transition:.2s ease
+}
+
+.card:hover{
+  border-color:rgba(213,164,81,.18);
+  box-shadow:0 24px 65px rgba(0,0,0,.46)
+}
+
+.card-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px
+}
+
+.card-title{
+  font-size:12px;
+  font-weight:750
+}
+
+.card-note{
+  font-size:10px;
+  color:#72746f;
+  margin-top:3px
+}
+
+.chart-wrap{
+  height:300px;
+  position:relative
+}
+
+.chart-wrap.tall{height:355px}
+.chart-wrap.small{height:240px}
+
+/* PROCESS */
+
+.process-list{
+  display:grid;
+  gap:10px
+}
+
+.process-row{
+  display:grid;
+  grid-template-columns:115px 1fr 75px;
+  align-items:center;
+  gap:9px;
+  transition:.2s ease;
+  cursor:pointer
+}
+
+.process-row:hover{
+  transform:translateX(3px);
+  background:rgba(213,164,81,.045);
+  border-radius:10px;
+  padding-left:5px;
+  padding-right:5px
+}
+
+.process-name{
+  font-size:11px;
+  color:#c5c5bf
+}
+
+.bar{
+  height:8px;
+  border-radius:99px;
+  background:#24292b;
+  overflow:hidden
+}
+
+.bar>span{
+  display:block;
+  height:100%;
+  border-radius:inherit;
+  background:linear-gradient(90deg,var(--gold),var(--gold-2))
+}
+
+.process-value{
+  text-align:right;
+  color:#a9aaa4;
+  font-size:10px
+}
+
+/* BODY MAP */
+
+.map-shell{
+  position:relative;
+  width:100%;
+  max-width:1000px;
+  margin:0 auto;
+  border-radius:14px;
+  overflow:hidden;
+  background:#080909;
+  border:1px solid var(--line)
+}
+
+.map-image{
+  display:block;
+  width:100%;
+  height:auto;
+  opacity:.72;
+  filter:grayscale(1) contrast(.96)
+}
+
+/*
+  IMPORTANT:
+  16 columns = A to P
+  14 rows    = 1 to 14
+  Origin     = TOP LEFT = A1
+
+  CSS Grid starts at the top-left automatically.
+  Direction is explicitly forced to LTR so A1 remains
+  the top-left origin.
+*/
+
+.map-grid{
+  position:absolute;
+  /* Start AFTER the image labels: column letters at the top
+     and row numbers on the left. */
+  left:4.0%;
+  top:6.05%;
+  right:0;
+  bottom:0;
+  display:grid;
+  grid-template-columns:repeat(16,1fr);
+  grid-template-rows:repeat(14,1fr);
+  grid-auto-flow:row;
+  direction:ltr
+}
+
+.map-cell{
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid rgba(255,255,255,.025);
+  transition:.18s ease;
+  cursor:pointer;
+  min-width:0;
+  min-height:0
+}
+
+.map-cell:hover{
+  outline:2px solid var(--gold-2);
+  z-index:5;
+  background:rgba(213,164,81,.15)!important;
+  transform:scale(1.04);
+  box-shadow:0 0 18px rgba(255,49,95,.35)
+}
+
+.map-cell span{
+  opacity:0;
+  color:#fff;
+  font-size:10px;
+  font-weight:800;
+  text-shadow:0 1px 4px #000;
+  pointer-events:none;
+  text-align:center
+}
+
+.map-cell:hover span{
+  opacity:1
+}
+
+.map-legend{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-top:10px;
+  color:#777a75;
+  font-size:10px
+}
+
+.legend-gradient{
+  width:160px;
+  height:7px;
+  border-radius:20px;
+  background:linear-gradient(
+    90deg,
+    #7eae78,
+    #ffb000,
+    #ff315f
+  )
+}
+
+/* TABLE */
+
+.table-wrap{
+  overflow:auto;
+  border:1px solid var(--line);
+  border-radius:12px
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:650px
+}
+
+th,td{
+  padding:10px 12px;
+  text-align:left;
+  border-bottom:1px solid rgba(255,255,255,.055);
+  font-size:11px
+}
+
+th{
+  background:#121617;
+  color:#7e807b;
+  text-transform:uppercase;
+  letter-spacing:.09em;
+  font-size:9px;
+  position:sticky;
+  top:0;
+  z-index:1
+}
+
+td{color:#c7c7c1}
+
+tbody tr:hover td{
+  background:rgba(213,164,81,.07)
+}
+
+.badge{
+  display:inline-flex;
+  padding:4px 7px;
+  border-radius:99px;
+  background:var(--gold-soft);
+  color:var(--gold-2);
+  font-size:9px;
+  font-weight:750
+}
+
+/* QUALITY */
+
+.quality-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:14px
+}
+
+.quality-card{
+  min-height:280px
+}
+
+.quality-main{
+  display:flex;
+  align-items:center;
+  gap:18px;
+  margin:8px 0 16px
+}
+
+.quality-ring{
+  width:110px;
+  height:110px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background:
+    radial-gradient(circle at center,#15191b 57%,transparent 58%),
+    conic-gradient(var(--gold-2) var(--value),#292e30 0);
+  flex:0 0 auto
+}
+
+.quality-ring strong{
+  font-size:22px
+}
+
+.quality-ring span{
+  font-size:8px;
+  color:#7d7f7a;
+  display:block;
+  text-align:center
+}
+
+.quality-desc h3{
+  margin:0 0 5px;
+  font-size:13px
+}
+
+.quality-desc p{
+  margin:0;
+  color:#777a75;
+  font-size:10px;
+  line-height:1.6
+}
+
+.quality-bars{
+  display:grid;
+  gap:8px
+}
+
+.quality-row{
+  display:grid;
+  grid-template-columns:95px 1fr 42px;
+  gap:8px;
+  align-items:center;
+  font-size:9px;
+  color:#898b86
+}
+
+.quality-row .bar{
+  height:6px
+}
+
+/* INSIGHTS */
+
+.insights{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px
+}
+
+.insight{
+  padding:14px;
+  border-radius:13px;
+  background:#101415;
+  border:1px solid var(--line)
+}
+
+.insight-tag{
+  color:var(--gold);
+  font-size:9px;
+  text-transform:uppercase;
+  letter-spacing:.12em
+}
+
+.insight strong{
+  display:block;
+  margin-top:8px;
+  font-size:12px
+}
+
+.insight p{
+  margin:6px 0 0;
+  color:#7f817d;
+  font-size:10px;
+  line-height:1.55
+}
+
+/* EMPTY */
+
+.empty{
+  min-height:180px;
+  display:grid;
+  place-items:center;
+  text-align:center;
+  color:#747771;
+  padding:30px
+}
+
+.empty strong{
+  display:block;
+  color:#b8b9b4;
+  margin-bottom:7px
+}
+
+/* TOAST */
+
+.toast{
+  position:fixed;
+  right:20px;
+  bottom:20px;
+  padding:12px 15px;
+  border-radius:12px;
+  background:#171c1e;
+  border:1px solid rgba(213,164,81,.35);
+  color:#ddd9d0;
+  font-size:11px;
+  box-shadow:var(--shadow);
+  transform:translateY(15px);
+  opacity:0;
+  pointer-events:none;
+  transition:.25s ease;
+  z-index:100
+}
+
+.toast.show{
+  opacity:1;
+  transform:translateY(0)
+}
+
+.active-filter{
+  display:none;
+  margin:0 0 14px;
+  padding:10px 14px;
+  border:1px solid rgba(213,164,81,.25);
+  border-radius:12px;
+  background:rgba(213,164,81,.08);
+  color:var(--gold-2);
+  font-size:11px;
+  letter-spacing:.04em
+}
+
+.active-filter.show{
+  display:block
+}
+
+/* RESPONSIVE */
+
+@media(max-width:1250px){
+  .kpis{grid-template-columns:repeat(3,1fr)}
+  .filter-grid{grid-template-columns:repeat(3,1fr)}
+  .grid-2{grid-template-columns:1fr}
+}
+
+@media(max-width:900px){
+  .app{display:block}
+
+  .sidebar{
+    position:relative;
+    width:100%;
+    height:auto;
+    border-right:0;
+    border-bottom:1px solid var(--line)
+  }
+
+  .nav{
+    display:grid;
+    grid-template-columns:repeat(4,1fr)
+  }
+
+  .sidebar-bottom{display:none}
+
+  main{padding:20px 15px}
+
+  .topbar{flex-direction:column}
+
+  .top-actions{
+    justify-content:flex-start
+  }
+
+  .kpis{grid-template-columns:repeat(2,1fr)}
+
+  .grid-3,
+  .quality-grid,
+  .insights{
+    grid-template-columns:1fr
+  }
+}
+
+@media(max-width:600px){
+  .nav{grid-template-columns:repeat(2,1fr)}
+  .filter-grid{grid-template-columns:1fr}
+  .kpis{grid-template-columns:1fr}
+  h1{font-size:24px}
+  .chart-wrap{height:260px}
+}
+</style>
+
+<style id="ui-improvements">
+/* ===== UI-ONLY IMPROVEMENTS: charts + status guide + dynamic background ===== */
+body::before{
+  content:"";
+  position:fixed;
+  inset:-20%;
+  z-index:-2;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(150,0,24,.16), transparent 30%),
+    radial-gradient(circle at 82% 72%, rgba(150,0,24,.11), transparent 28%),
+    radial-gradient(circle at 50% 5%, rgba(255,255,255,.035), transparent 24%);
+  filter:blur(28px);
+  animation:qualityAtmosphere 18s ease-in-out infinite alternate;
+}
+body::after{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  opacity:.16;
+  background-image:
+    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+  background-size:46px 46px;
+  mask-image:linear-gradient(to bottom, transparent, black 12%, black 88%, transparent);
+}
+@keyframes qualityAtmosphere{
+  0%{transform:translate3d(-2%,0,0) scale(1)}
+  50%{transform:translate3d(2%,-1%,0) scale(1.035)}
+  100%{transform:translate3d(-1%,2%,0) scale(1.02)}
+}
+
+/* Professional status guide */
+.quality-status-guide{
+  display:flex;
+  align-items:stretch;
+  gap:12px;
+  margin:14px 0 20px;
+  padding:14px;
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:16px;
+  background:linear-gradient(135deg,rgba(255,255,255,.055),rgba(255,255,255,.018));
+  box-shadow:0 12px 30px rgba(0,0,0,.18);
+  backdrop-filter:blur(12px);
+}
+.quality-status-title{
+  min-width:150px;
+  display:flex;
+  align-items:center;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:rgba(255,255,255,.78);
+}
+.quality-status-item{
+  flex:1;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-height:48px;
+  padding:9px 13px;
+  border-radius:12px;
+  background:rgba(0,0,0,.18);
+  border:1px solid rgba(255,255,255,.06);
+}
+.quality-status-dot{
+  width:10px;
+  height:10px;
+  flex:0 0 10px;
+  border-radius:50%;
+  box-shadow:0 0 14px currentColor;
+}
+.quality-status-copy{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.quality-status-copy strong{
+  font-size:12px;
+  color:#fff;
+}
+.quality-status-copy span{
+  font-size:10px;
+  color:rgba(255,255,255,.62);
+}
+.quality-critical .quality-status-dot{color:#ff334f;background:#ff334f}
+.quality-attention .quality-status-dot{color:#ff9f43;background:#ff9f43}
+.quality-normal .quality-status-dot{color:#aeb6c2;background:#aeb6c2}
+
+/* Chart readability only */
+.chart-card, .chart-container, .chart-box{
+  position:relative;
+}
+.chart-card canvas, .chart-container canvas, .chart-box canvas{
+  filter:drop-shadow(0 5px 12px rgba(0,0,0,.16));
+}
+.chart-card:hover, .chart-container:hover, .chart-box:hover{
+  transition:transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+  transform:translateY(-2px);
+}
+.quality-chart-hint{
+  margin-top:8px;
+  font-size:10px;
+  color:rgba(255,255,255,.48);
+}
+@media(max-width:900px){
+  .quality-status-guide{flex-direction:column}
+  .quality-status-title{min-width:0}
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="app">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+
+  <div class="brand">
+    <div class="brand-mark">BIW</div>
+
+    <div class="brand-text">
+      <strong>QUALITY</strong>
+      <span>BODY ANALYSIS</span>
+    </div>
+  </div>
+
+  <div class="nav-title">Dashboard</div>
+
+  <div class="nav">
+    <button class="active" data-target="overview">Overview</button>
+    <button data-target="defects">Defects</button>
+    <button data-target="process">Process</button>
+    <button data-target="locations">Locations</button>
+    <button data-target="quality">Quality</button>
+    <button data-target="details">Details</button>
+  </div>
+
+  <div class="sidebar-bottom">
+    <div class="status">
+      <span class="dot"></span>
+      <span id="dataStatus">Waiting for Excel data</span>
+    </div>
+  </div>
+
+</aside>
+
+
+<!-- MAIN -->
+<main>
+
+<div class="quality-status-guide" aria-label="Quality status guide">
+  <div class="quality-status-title">Quality Status Guide</div>
+  <div class="quality-status-item quality-critical">
+    <span class="quality-status-dot"></span>
+    <div class="quality-status-copy">
+      <strong>Critical · 50%+</strong>
+      <span>Immediate action required</span>
+    </div>
+  </div>
+  <div class="quality-status-item quality-attention">
+    <span class="quality-status-dot"></span>
+    <div class="quality-status-copy">
+      <strong>Attention · 20–49.9%</strong>
+      <span>Secondary action recommended</span>
+    </div>
+  </div>
+  <div class="quality-status-item quality-normal">
+    <span class="quality-status-dot"></span>
+    <div class="quality-status-copy">
+      <strong>Normal · Below 20%</strong>
+      <span>Within normal monitoring range</span>
+    </div>
+  </div>
+</div>
+
+
+
+<div id="activeChartFilter" class="active-filter"></div>
+
+<header class="topbar" id="overview">
+
+  <div>
+    <div class="eyebrow">BIW / JAC S2</div>
+
+    <h1>Body Quality Analysis</h1>
+
+    <p class="subtitle" id="reportSubtitle">
+      Upload the updated Excel file to load the live dashboard.
+    </p>
+  </div>
+
+  <div class="top-actions">
+
+    <label class="btn gold" for="excelInput">
+      Upload Excel
+    </label>
+
+    <input
+      id="excelInput"
+      class="hidden"
+      type="file"
+      accept=".xlsx,.xls"
+    >
+
+    <button class="btn" id="resetBtn">
+      Reset Filters
+    </button>
+
+  </div>
+
+</header>
+
+
+<!-- FILTERS -->
+
+<section class="filters">
+
+  <div class="filter-grid">
+
+    <div class="field">
+      <label>From</label>
+      <input type="date" id="fromDate">
+    </div>
+
+    <div class="field">
+      <label>To</label>
+      <input type="date" id="toDate">
+    </div>
+
+    <div class="field">
+      <label>Process</label>
+      <select id="processFilter">
+        <option value="">All Processes</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Defect</label>
+      <select id="defectFilter">
+        <option value="">All Defects</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Job</label>
+      <select id="jobFilter">
+        <option value="">All Jobs</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Chassis</label>
+      <input
+        id="chassisFilter"
+        type="text"
+        placeholder="Search chassis..."
+      >
+    </div>
+
+  </div>
+
+  <div class="filter-actions">
+    <button class="btn" id="applyBtn">
+      Apply Filters
+    </button>
+  </div>
+
+</section>
+
+
+<!-- KPIs -->
+
+<section class="kpis">
+
+  <div class="kpi">
+    <div class="kpi-label">Total Defects</div>
+    <div class="kpi-value gold-text" id="kpiDefects">—</div>
+    <div class="kpi-sub">filtered records</div>
+  </div>
+
+  <div class="kpi">
+    <div class="kpi-label">Productivity</div>
+    <div class="kpi-value" id="kpiProductivity">—</div>
+    <div class="kpi-sub">unique chassis</div>
+  </div>
+
+  <div class="kpi">
+    <div class="kpi-label">DPU</div>
+    <div class="kpi-value" id="kpiDpu">—</div>
+    <div class="kpi-sub">defects / chassis</div>
+  </div>
+
+  <div class="kpi">
+    <div class="kpi-label">Top Process</div>
+    <div class="kpi-value" id="kpiProcess">—</div>
+    <div class="kpi-sub" id="kpiProcessSub">
+      highest defect share
+    </div>
+  </div>
+
+  <div class="kpi">
+    <div class="kpi-label">Top Defect</div>
+    <div class="kpi-value" id="kpiTopDefect">—</div>
+    <div class="kpi-sub" id="kpiTopDefectSub">
+      highest frequency
+    </div>
+  </div>
+
+</section>
+
+
+<!-- OVERVIEW -->
+
+<section class="section">
+
+  <div class="section-title">
+    <h2>Overview</h2>
+    <span>Live from Excel</span>
+  </div>
+
+  <div class="grid-2">
+
+    <div class="card">
+
+      <div class="card-head">
+
+        <div>
+          <div class="card-title">
+            Top Defects — Pareto
+          </div>
+
+          <div class="card-note">
+            Frequency and cumulative contribution
+          </div>
+        </div>
+
+      </div>
+
+      <div class="chart-wrap tall">
+        <canvas id="paretoChart"></canvas>
+      </div>
+
+    </div>
+
+
+    <div class="card">
+
+      <div class="card-head">
+
+        <div>
+          <div class="card-title">
+            DPU by Day
+          </div>
+
+          <div class="card-note">
+            Defects per unique chassis
+          </div>
+        </div>
+
+      </div>
+
+      <div class="chart-wrap tall">
+        <canvas id="dpuChart"></canvas>
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <div class="section">
+
+    <div class="grid-2">
+
+      <div class="card">
+
+        <div class="card-head">
+          <div>
+            <div class="card-title">
+              Productivity & Defects by Day
+            </div>
+
+            <div class="card-note">
+              Unique chassis versus defect records
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-wrap">
+          <canvas id="dailyChart"></canvas>
+        </div>
+
+      </div>
+
+
+      <div class="card">
+
+        <div class="card-head">
+          <div>
+            <div class="card-title">
+              Process Distribution
+            </div>
+
+            <div class="card-note">
+              Share of filtered defects
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-wrap">
+          <canvas id="processChart"></canvas>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- DEFECTS -->
+
+<section class="section" id="defects">
+
+  <div class="section-title">
+    <h2>Defect Analysis</h2>
+    <span>
+      Surface / Spot / Sealer & CO2 / Installation / CKD
+    </span>
+  </div>
+
+  <div class="grid-3">
+
+    <div class="card">
+
+      <div class="card-head">
+        <div>
+          <div class="card-title">Surface</div>
+          <div class="card-note">
+            Top surface defects
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-wrap small">
+        <canvas id="surfaceChart"></canvas>
+      </div>
+
+    </div>
+
+
+    <div class="card">
+
+      <div class="card-head">
+        <div>
+          <div class="card-title">Spot</div>
+          <div class="card-note">
+            Top spot defects
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-wrap small">
+        <canvas id="spotChart"></canvas>
+      </div>
+
+    </div>
+
+
+    <div class="card">
+
+      <div class="card-head">
+        <div>
+          <div class="card-title">
+            Sealer & CO2
+          </div>
+
+          <div class="card-note">
+            Top welding / sealer defects
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-wrap small">
+        <canvas id="sealerChart"></canvas>
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- PROCESS -->
+
+<section class="section" id="process">
+
+  <div class="section-title">
+    <h2>Process Responsibility</h2>
+    <span>Defect distribution by process</span>
+  </div>
+
+  <div class="card">
+    <div class="process-list" id="processList"></div>
+  </div>
+
+</section>
+
+
+<!-- LOCATION MAP -->
+
+<section class="section" id="locations">
+
+  <div class="section-title">
+
+    <h2>Defect Location Map</h2>
+
+    <span>
+      A–P / 1–14 body grid
+    </span>
+
+  </div>
+
+
+  <div class="card">
+
+    <div class="card-head">
+
+      <div>
+
+        <div class="card-title">
+          Body Defects Distribution
+        </div>
+
+        <div class="card-note">
+          Hover a cell to see the location and defect count
+        </div>
+
+      </div>
+
+      <label class="btn" for="mapInput">
+        Upload Body Map
+      </label>
+
+      <input
+        id="mapInput"
+        class="hidden"
+        type="file"
+        accept="image/*"
+      >
+
+    </div>
+
+
+    <div class="map-shell">
+
+      <img
+        id="bodyMap"
+        class="map-image"
+        src="assets/body-map.jpg"
+        alt="Body location map"
+      >
+
+      <!--
+        16 COLUMNS
+        A B C D E F G H I J K L M N O P
+
+        14 ROWS
+        1 ... 14
+
+        ORIGIN:
+        TOP LEFT = A1
+      -->
+
+      <div
+        class="map-grid"
+        id="mapGrid"
+      ></div>
+
+    </div>
+
+
+    <div class="map-legend">
+      <span>Normal</span>
+      <span class="legend-gradient"></span>
+      <span>Critical</span>
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- QUALITY -->
+
+<section class="section" id="quality">
+
+  <div class="section-title">
+    <h2>Quality Evaluation</h2>
+    <span>Values reproduced from JUL-2026 report</span>
+  </div>
+
+
+  <div class="quality-grid">
+
+    <div class="card quality-card">
+
+      <div class="card-title">
+        CMM Evaluation
+      </div>
+
+      <div class="card-note">
+        Report snapshot
+      </div>
+
+      <div class="quality-main">
+
+        <div class="quality-ring" style="--value:86%">
+
+          <div>
+            <strong>86.0%</strong>
+            <span>AVERAGE</span>
+          </div>
+
+        </div>
+
+        <div class="quality-desc">
+
+          <h3>CMM Average</h3>
+
+          <p>
+            Evaluation values reported for the selected chassis
+            in the JUL-2026 quality report.
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="quality-bars">
+
+        <div class="quality-row">
+          <span>CH-000309</span>
+          <div class="bar">
+            <span style="width:87%"></span>
+          </div>
+          <b>87%</b>
+        </div>
+
+        <div class="quality-row">
+          <span>CH-000349</span>
+          <div class="bar">
+            <span style="width:85%"></span>
+          </div>
+          <b>85%</b>
+        </div>
+
+        <div class="quality-row">
+          <span>CH-000289</span>
+          <div class="bar">
+            <span style="width:86%"></span>
+          </div>
+          <b>86%</b>
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div class="card quality-card">
+
+      <div class="card-title">
+        Gap & Flushness
+      </div>
+
+      <div class="card-note">
+        Report snapshot
+      </div>
+
+      <div class="quality-main">
+
+        <div class="quality-ring" style="--value:85.6%">
+
+          <div>
+            <strong>85.6%</strong>
+            <span>AVERAGE</span>
+          </div>
+
+        </div>
+
+        <div class="quality-desc">
+
+          <h3>Gap & Flushness Average</h3>
+
+          <p>
+            Evaluation values reported for the selected chassis
+            in the JUL-2026 quality report.
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="quality-bars">
+
+        <div class="quality-row">
+          <span>CH-000293</span>
+          <div class="bar">
+            <span style="width:87%"></span>
+          </div>
+          <b>87%</b>
+        </div>
+
+        <div class="quality-row">
+          <span>CH-000306</span>
+          <div class="bar">
+            <span style="width:86%"></span>
+          </div>
+          <b>86%</b>
+        </div>
+
+        <div class="quality-row">
+          <span>CH-000316</span>
+          <div class="bar">
+            <span style="width:82%"></span>
+          </div>
+          <b>82%</b>
+        </div>
+
+        <div class="quality-row">
+          <span>CH-000330</span>
+          <div class="bar">
+            <span style="width:87%"></span>
+          </div>
+          <b>87%</b>
+        </div>
+
+        <div class="quality-row">
+          <span>CH-000343</span>
+          <div class="bar">
+            <span style="width:84%"></span>
+          </div>
+          <b>84%</b>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- INSIGHTS -->
+
+<section class="section">
+
+  <div class="section-title">
+
+    <h2>Management Insights</h2>
+
+    <span>
+      Automatically generated from the filtered data
+    </span>
+
+  </div>
+
+  <div
+    class="insights"
+    id="insights"
+  ></div>
+
+</section>
+
+
+<!-- DETAILS -->
+
+<section class="section" id="details">
+
+  <div class="section-title">
+
+    <h2>Defect Location Details</h2>
+
+    <span>
+      Top locations in the current selection
+    </span>
+
+  </div>
+
+
+  <div class="card">
+
+    <div class="table-wrap">
+
+      <table>
+
+        <thead>
+
+          <tr>
+            <th>Location</th>
+            <th>Process</th>
+            <th>Defect</th>
+            <th>Count</th>
+            <th>Share</th>
+          </tr>
+
+        </thead>
+
+        <tbody id="locationTable"></tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<div class="empty" id="emptyState">
+
+  <div>
+
+    <strong>Upload the Excel workbook</strong>
+
+    <span>
+      Use the updated <b>jetour body defects</b>
+      Excel file to populate the dashboard.
+    </span>
+
+  </div>
+
+</div>
+
+</main>
+
+</div>
+
+
+<div class="toast" id="toast"></div>
+
+
+<script>
+
+/* ==========================================================
+   BIW BODY QUALITY DASHBOARD
+
+   BODY MAP:
+   16 COLUMNS = A-P
+   14 ROWS    = 1-14
+   ORIGIN     = TOP LEFT A1
+
+   SEVERITY:
+   50%+      = CRITICAL / IMMEDIATE ACTION
+   20-49.9%  = HIGH / SECONDARY ACTION
+   <20%      = NORMAL / MONITOR
+   ========================================================== */
+
+const state={
+  raw:[],
+  filtered:[],
+  charts:{},
+  fileName:"",
+  chartFilter:null
+};
+
+const $=id=>document.getElementById(id);
+
+
+/* COLORS */
+
+const COLORS=[
+  "#d5a451",
+  "#b98a43",
+  "#e1b65e",
+  "#8d6a37",
+  "#f0c36b",
+  "#6f9db8",
+  "#7eae78",
+  "#c95b58",
+  "#8f8f89",
+  "#c9c5ba"
+];
+
+
+/* SEVERITY */
+
+function severityForPct(pct){
+
+  if(pct>=50){
+
+    return{
+      label:"CRITICAL • Immediate Action",
+      color:"#ff315f",
+      glow:"rgba(255,49,95,.55)"
+    };
+
+  }
+
+  if(pct>=20){
+
+    return{
+      label:"HIGH • Secondary Action",
+      color:"#ffb000",
+      glow:"rgba(255,176,0,.42)"
+    };
+
+  }
+
+  return{
+    label:"NORMAL • Monitor",
+    color:"#7eae78",
+    glow:"rgba(126,174,120,.32)"
+  };
+
+}
+
+
+function severityColor(pct,alpha=1){
+
+  const c=severityForPct(pct).color;
+
+  if(alpha===1)return c;
+
+  const n=parseInt(c.slice(1),16);
+
+  return `rgba(
+    ${n>>16&255},
+    ${n>>8&255},
+    ${n&255},
+    ${alpha}
+  )`;
+}
+
+
+function sum(a){
+
+  return a.reduce(
+    (x,y)=>x+(Number(y)||0),
+    0
+  );
+
+}
+
+
+function severityArray(values){
+
+  const total=sum(values.map(Number));
+
+  return values.map(v=>
+    severityColor(
+      total?(Number(v)/total*100):0,
+      .88
+    )
+  );
+
+}
+
+
+/* TOAST */
+
+function showToast(message){
+
+  const t=$("toast");
+
+  t.textContent=message;
+
+  t.classList.add("show");
+
+  clearTimeout(window.__toastTimer);
+
+  window.__toastTimer=setTimeout(
+    ()=>t.classList.remove("show"),
+    2500
+  );
+
+}
+
+
+/* HELPERS */
+
+function normalizeKey(v){
+
+  return String(v??"")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g,"");
+
+}
+
+
+function findKey(obj,candidates){
+
+  const keys=Object.keys(obj);
+
+  for(const c of candidates){
+
+    const w=normalizeKey(c);
+
+    const f=keys.find(
+      k=>normalizeKey(k)===w
+    );
+
+    if(f)return f;
+
+  }
+
+  return null;
+
+}
+
+
+function parseDate(value){
+
+  if(value instanceof Date&&!isNaN(value))
+    return value;
+
+  if(typeof value==="number"){
+
+    const d=new Date(
+      Date.UTC(1899,11,30)+
+      value*86400000
+    );
+
+    return isNaN(d)?null:d;
+
+  }
+
+  const s=String(value??"").trim();
+
+  if(!s)return null;
+
+  /*
+    MM/DD/YYYY
+  */
+
+  let m=s.match(
+    /^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})$/
+  );
+
+  if(m){
+
+    const mo=+m[1]-1;
+    const day=+m[2];
+    const y=+m[3];
+
+    const d=new Date(y,mo,day);
+
+    return(
+      d.getFullYear()===y &&
+      d.getMonth()===mo &&
+      d.getDate()===day
+    )?d:null;
+
+  }
+
+  const d=new Date(s);
+
+  return isNaN(d)?null:d;
+
+}
+
+
+function dateISO(d){
+
+  return d?
+    `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`
+    :"";
+
+}
+
+
+function formatDate(d){
+
+  return d?
+    `${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getDate()).padStart(2,"0")}/${d.getFullYear()}`
+    :"—";
+
+}
+
+
+function shortText(v,max=27){
+
+  const x=String(v??"");
+
+  return x.length>max?
+    x.slice(0,max-1)+"…":
+    x;
+
+}
+
+
+function groupCount(rows,keyFn){
+
+  const m=new Map();
+
+  rows.forEach(r=>{
+
+    const k=keyFn(r)||"Unknown";
+
+    m.set(
+      k,
+      (m.get(k)||0)+1
+    );
+
+  });
+
+  return [...m.entries()]
+    .sort((a,b)=>b[1]-a[1]);
+
+}
+
+
+function uniqueCount(rows,key){
+
+  return new Set(
+    rows
+      .map(r=>String(r[key]??"").trim())
+      .filter(Boolean)
+  ).size;
+
+}
+
+
+function escapeHtml(v){
+
+  return String(v??"")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+
+}
+
+
+/* PROCESS CLASSIFICATION */
+
+function classifyProcess(code){
+
+  const c=String(code??"")
+    .trim()
+    .toUpperCase();
+
+  if([
+    "30","40","50","60","70",
+    "80","90","220","270","280"
+  ].includes(c))
+    return "Surface";
+
+  if([
+    "20","150","160","170","180",
+    "190","200","210","250"
+  ].includes(c))
+    return "Spot";
+
+  if([
+    "10","230","240","260"
+  ].includes(c))
+    return "Sealer&Co2";
+
+  if([
+    "100","110","120","130","140"
+  ].includes(c))
+    return "Installation";
+
+  if([
+    "CKD-10",
+    "CKD-230",
+    "CKD-240",
+    "CKD-260",
+    "CKD-20",
+    "CKD-150",
+    "CKD-160",
+    "CKD-170",
+    "CKD-180",
+    "CKD-190",
+    "CKD-200",
+    "CKD-210",
+    "CKD-250",
+    "CKD-30",
+    "CKD-40",
+    "CKD-50",
+    "CKD-60",
+    "CKD-70",
+    "CKD-80",
+    "CKD-90",
+    "CKD-220",
+    "CKD-270",
+    "CKD-280",
+    "CKD-100",
+    "CKD-110",
+    "CKD-120",
+    "CKD-130",
+    "CKD-140"
+  ].includes(c))
+    return "CKD";
+
+  return "Unknown";
+
+}
+
+
+/* CHART FILTERING */
+
+function setChartFilter(key,value){
+
+  if(
+    value===undefined||
+    value===null||
+    value===""
+  )return;
+
+  const v=String(value);
+
+  if(
+    state.chartFilter?.key===key &&
+    state.chartFilter?.value===v
+  ){
+
+    state.chartFilter=null;
+
+    showToast("Chart filter cleared");
+
+  }else{
+
+    state.chartFilter={
+      key,
+      value:v
+    };
+
+    showToast(
+      `Filtered by ${key}: ${v}`
+    );
+
+  }
+
+  applyFilters();
+
+}
+
+
+function chartClickHandler(
+  filterKey,
+  values
+){
+
+  return(event,elements)=>{
+
+    if(!elements.length)return;
+
+    const i=elements[0].index;
+
+    const v=values[i];
+
+    if(v!==undefined)
+      setChartFilter(filterKey,v);
+
+  };
+
+}
+
+
+/* PERCENTAGE LABELS */
+
+const percentageLabelsPlugin={
+
+  id:"percentageLabels",
+
+  afterDatasetsDraw(chart){
+
+    const{
+      ctx,
+      data
+    }=chart;
+
+    ctx.save();
+
+    data.datasets.forEach(
+      (ds,di)=>{
+
+        if(
+          ds.hidden||
+          String(ds.label||"")
+            .includes("Cumulative")
+        )return;
+
+        const meta=
+          chart.getDatasetMeta(di);
+
+        if(!meta||meta.hidden)return;
+
+        const vals=
+          (ds.data||[])
+          .map(v=>Number(v)||0);
+
+        const total=sum(vals);
+
+        if(!total)return;
+
+        meta.data.forEach(
+          (el,i)=>{
+
+            const value=vals[i];
+
+            if(!value)return;
+
+            if(
+              chart.config.type==="doughnut"||
+              ds.type==="doughnut"
+            )return;
+
+            const pos=
+              el.tooltipPosition();
+
+            ctx.fillStyle="#f4f0e8";
+
+            ctx.font=
+              "700 9px Inter,Arial,sans-serif";
+
+            ctx.textAlign="center";
+
+            ctx.textBaseline="bottom";
+
+            ctx.fillText(
+              `${(value/total*100).toFixed(1)}%`,
+              pos.x,
+              pos.y-5
+            );
+
+          }
+        );
+
+      }
+    );
+
+    ctx.restore();
+
+  }
+
+};
+
+Chart.register(
+  percentageLabelsPlugin
+);
+
+
+/* CHART SETTINGS */
+
+const chartBase={
+  color:"#aaa9a4",
+  gridColor:"rgba(255,255,255,.055)"
+};
+
+
+function destroyChart(name){
+
+  if(state.charts[name]){
+
+    state.charts[name].destroy();
+
+    state.charts[name]=null;
+
+  }
+
+}
+
+
+function baseTooltip(){
+
+  return{
+
+    backgroundColor:"#101415",
+    borderColor:"rgba(213,164,81,.35)",
+    borderWidth:1,
+    titleColor:"#f2eee6",
+    bodyColor:"#c9c7c0",
+    padding:10
+
+  };
+
+}
+
+
+function chartOptions(){
+
+  return{
+
+    responsive:true,
+    maintainAspectRatio:false,
+
+    animation:{
+      duration:450
+    },
+
+    plugins:{
+
+      legend:{
+        labels:{
+          color:chartBase.color,
+          boxWidth:9,
+          boxHeight:9,
+          font:{
+            size:10
+          }
+        }
+      },
+
+      tooltip:{
+        ...baseTooltip(),
+
+        callbacks:{
+
+          label:ctx=>{
+
+            const vals=
+              (ctx.dataset.data||[])
+              .map(v=>Number(v)||0);
+
+            const total=sum(vals);
+
+            const value=
+              Number(ctx.raw)||0;
+
+            const pct=
+              total?
+              value/total*100:
+              0;
+
+            const sev=
+              severityForPct(pct);
+
+            return ` ${
+              ctx.dataset.label||"Value"
+            }: ${
+              value.toLocaleString()
+            } (${
+              pct.toFixed(1)
+            }%) • ${
+              sev.label
+            }`;
+
+          }
+
+        }
+
+      }
+
+    },
+
+    scales:{
+
+      x:{
+        grid:{
+          color:chartBase.gridColor
+        },
+
+        ticks:{
+          color:"#8e908b",
+          font:{
+            size:9
+          },
+          maxRotation:45,
+          minRotation:0
+        }
+
+      },
+
+      y:{
+        beginAtZero:true,
+
+        grid:{
+          color:chartBase.gridColor
+        },
+
+        ticks:{
+          color:"#8e908b",
+          font:{
+            size:9
+          }
+        }
+
+      }
+
+    }
+
+  };
+
+}
+
+
+/* BAR */
+
+function makeBar(
+  name,
+  canvasId,
+  labels,
+  values,
+  {
+    label="Defects",
+    filterKey="defect",
+    filterValues=labels,
+    horizontal=false
+  }={}
+){
+
+  destroyChart(name);
+
+  const vals=values.map(Number);
+
+  state.charts[name]=new Chart(
+    $(canvasId),
+    {
+
+      type:"bar",
+
+      data:{
+        labels,
+
+        datasets:[{
+
+          label,
+          data:vals,
+
+          backgroundColor:ctx=>{
+
+            const total=sum(vals);
+
+            return severityColor(
+              total?
+              ctx.raw/total*100:
+              0,
+              .88
+            );
+
+          },
+
+          borderColor:ctx=>{
+
+            const total=sum(vals);
+
+            return severityColor(
+              total?
+              ctx.raw/total*100:
+              0,
+              1
+            );
+
+          },
+
+          borderWidth:1,
+          borderRadius:7,
+          borderSkipped:false,
+          maxBarThickness:34,
+          hoverBorderWidth:2
+
+        }]
+
+      },
+
+      options:{
+
+        ...chartOptions(),
+
+        indexAxis:
+          horizontal?"y":"x",
+
+        onClick:
+          chartClickHandler(
+            filterKey,
+            filterValues
+          ),
+
+        onHover:(e,els)=>{
+
+          e.native.target.style.cursor=
+            els.length?
+            "pointer":
+            "default";
+
+        }
+
+      }
+
+    }
+  );
+
+}
+
+
+/* DOUGHNUT */
+
+function makeDoughnut(
+  name,
+  canvasId,
+  labels,
+  values,
+  filterKey="process",
+  filterValues=labels
+){
+
+  destroyChart(name);
+
+  const vals=values.map(Number);
+
+  state.charts[name]=new Chart(
+    $(canvasId),
+    {
+
+      type:"doughnut",
+
+      data:{
+        labels,
+
+        datasets:[{
+
+          data:vals,
+
+          backgroundColor:
+            severityArray(vals),
+
+          borderColor:"#15191b",
+          borderWidth:3,
+          hoverOffset:9,
+          hoverBorderColor:"#f4f0e8"
+
+        }]
+
+      },
+
+      options:{
+
+        responsive:true,
+        maintainAspectRatio:false,
+        cutout:"68%",
+
+        onClick:
+          chartClickHandler(
+            filterKey,
+            filterValues
+          ),
+
+        onHover:(e,els)=>{
+
+          e.native.target.style.cursor=
+            els.length?
+            "pointer":
+            "default";
+
+        },
+
+        plugins:{
+
+          legend:{
+            position:"bottom",
+
+            labels:{
+              color:"#a8aaa5",
+              boxWidth:9,
+              boxHeight:9,
+              padding:12,
+              font:{
+                size:9
+              }
+            }
+
+          },
+
+          tooltip:{
+
+            ...baseTooltip(),
+
+            callbacks:{
+
+              label:ctx=>{
+
+                const total=sum(vals);
+
+                const pct=
+                  total?
+                  ctx.raw/total*100:
+                  0;
+
+                return ` ${
+                  ctx.label
+                }: ${
+                  ctx.raw
+                } (${
+                  pct.toFixed(1)
+                }%) • ${
+                  severityForPct(pct).label
+                }`;
+
+              }
+
+            }
+
+          }
+
+        }
+
+      }
+
+    }
+  );
+
+}
+
+
+/* DATA */
+
+function buildDataObjects(rows){
+
+  return rows.map(r=>{
+
+    const d=parseDate(r.__dateRaw);
+
+    const code=
+      String(r.__code??"").trim();
+
+    return{
+
+      ...r,
+
+      __date:d,
+      __dateISO:dateISO(d),
+
+      __process:
+        classifyProcess(code),
+
+      __defect:
+        String(r.__defect??"Unknown")
+        .trim()||"Unknown",
+
+      __location:
+        String(r.__location??"").trim(),
+
+      __chassis:
+        String(r.__chassis??"").trim(),
+
+      __job:
+        String(r.__job??"").trim(),
+
+      __code:code
+
+    };
+
+  });
+
+}
+
+
+function prepareRows(jsonRows){
+
+  if(!jsonRows.length)return[];
+
+  const s=jsonRows[0];
+
+  const dateKey=
+    findKey(s,["date"]);
+
+  const defectKey=
+    findKey(
+      s,
+      ["Defect Description","defect"]
+    );
+
+  const locationKey=
+    findKey(
+      s,
+      [
+        "Defect Location",
+        "Defect Loction",
+        "location"
+      ]
+    );
+
+  const chassisKey=
+    findKey(
+      s,
+      [
+        "Chassis Number",
+        "Chassis"
+      ]
+    );
+
+  const jobKey=
+    findKey(s,["Job"]);
+
+  const codeKey=
+    findKey(s,["Defect Code"]);
+
+  if(
+    !dateKey||
+    !defectKey||
+    !chassisKey
+  ){
+
+    throw new Error(
+      "The selected sheet is missing Date, Defect Description, or Chassis Number."
+    );
+
+  }
+
+  return jsonRows.map(r=>({
+
+    __dateRaw:r[dateKey],
+
+    __defect:r[defectKey],
+
+    __location:
+      locationKey?
+      r[locationKey]:
+      "",
+
+    __chassis:r[chassisKey],
+
+    __job:
+      jobKey?
+      r[jobKey]:
+      "",
+
+    __code:
+      codeKey?
+      r[codeKey]:
+      ""
+
+  })).filter(
+    r=>
+      r.__dateRaw!==undefined &&
+      r.__chassis!==undefined
+  );
+
+}
+
+
+/* FILTERS */
+
+function fillSelect(
+  id,
+  values,
+  label
+){
+
+  const el=$(id);
+
+  el.innerHTML=
+    `<option value="">${label}</option>`;
+
+  [
+    ...new Set(
+      values
+        .filter(
+          v=>String(v).trim()!==""
+        )
+        .map(
+          v=>String(v).trim()
+        )
+    )
+  ]
+  .sort(
+    (a,b)=>a.localeCompare(b)
+  )
+  .forEach(v=>{
+
+    const o=
+      document.createElement("option");
+
+    o.value=v;
+
+    o.textContent=v;
+
+    el.appendChild(o);
+
+  });
+
+}
+
+
+function populateFilters(){
+
+  fillSelect(
+    "processFilter",
+    state.raw.map(r=>r.__process),
+    "All Processes"
+  );
+
+  fillSelect(
+    "defectFilter",
+    state.raw.map(r=>r.__defect),
+    "All Defects"
+  );
+
+  fillSelect(
+    "jobFilter",
+    state.raw.map(r=>r.__job),
+    "All Jobs"
+  );
+
+  const ds=
+    state.raw
+      .map(r=>r.__date)
+      .filter(Boolean)
+      .sort((a,b)=>a-b);
+
+  if(ds.length){
+
+    $("fromDate").value=
+      dateISO(ds[0]);
+
+    $("toDate").value=
+      dateISO(ds[ds.length-1]);
+
+  }
+
+}
+
+
+/* APPLY FILTERS */
+
+function applyFilters(){
+
+  const from=
+    $("fromDate").value;
+
+  const to=
+    $("toDate").value;
+
+  const process=
+    $("processFilter").value;
+
+  const defect=
+    $("defectFilter").value;
+
+  const job=
+    $("jobFilter").value;
+
+  const chassis=
+    $("chassisFilter")
+    .value
+    .trim()
+    .toLowerCase();
+
+
+  state.filtered=
+    state.raw.filter(r=>{
+
+      if(!r.__date)return false;
+
+      const iso=r.__dateISO;
+
+      if(from&&iso<from)
+        return false;
+
+      if(to&&iso>to)
+        return false;
+
+      if(
+        process&&
+        r.__process!==process
+      )
+        return false;
+
+      if(
+        defect&&
+        r.__defect!==defect
+      )
+        return false;
+
+      if(
+        job&&
+        r.__job!==job
+      )
+        return false;
+
+      if(
+        chassis&&
+        !r.__chassis
+          .toLowerCase()
+          .includes(chassis)
+      )
+        return false;
+
+
+      if(state.chartFilter){
+
+        const f=state.chartFilter;
+
+        if(
+          f.key==="process"&&
+          r.__process!==f.value
+        )
+          return false;
+
+        if(
+          f.key==="defect"&&
+          r.__defect!==f.value
+        )
+          return false;
+
+        if(
+          f.key==="location"&&
+          r.__location!==f.value
+        )
+          return false;
+
+        if(
+          f.key==="date"&&
+          r.__dateISO!==f.value
+        )
+          return false;
+
+      }
+
+      return true;
+
+    });
+
+
+  render();
+
+}
+
+
+/* RENDER */
+
+function render(){
+
+  const rows=state.filtered;
+
+  const defects=rows.length;
+
+  const productivity=
+    uniqueCount(
+      rows,
+      "__chassis"
+    );
+
+  const dpu=
+    productivity?
+    defects/productivity:
+    0;
+
+  const pc=
+    groupCount(
+      rows,
+      r=>r.__process
+    );
+
+  const dc=
+    groupCount(
+      rows,
+      r=>r.__defect
+    );
+
+
+  $("kpiDefects").textContent=
+    defects.toLocaleString();
+
+  $("kpiProductivity").textContent=
+    productivity.toLocaleString();
+
+  $("kpiDpu").textContent=
+    dpu.toFixed(2);
+
+
+  $("kpiProcess").textContent=
+    pc.length?
+    shortText(pc[0][0],18):
+    "—";
+
+  $("kpiProcessSub").textContent=
+    pc.length?
+    `${pc[0][1].toLocaleString()} defects`:
+    "no data";
+
+
+  $("kpiTopDefect").textContent=
+    dc.length?
+    shortText(dc[0][0],18):
+    "—";
+
+  $("kpiTopDefectSub").textContent=
+    dc.length?
+    `${dc[0][1].toLocaleString()} records`:
+    "no data";
+
+
+  renderPareto(dc);
+  renderDpu(rows);
+  renderDaily(rows);
+  renderProcess(pc);
+  renderProcessList(pc,defects);
+  renderProcessCharts(rows);
+
+  /*
+    THIS IS THE UPDATED 14 x 16 MAP
+    WITH TOP-LEFT A1 ORIGIN
+  */
+  renderMap(rows);
+
+  renderLocationTable(rows);
+
+  renderInsights(
+    rows,
+    pc,
+    dc,
+    dpu
+  );
+
+}
+
+
+/* PARETO */
+
+function renderPareto(counts){
+
+  const top=
+    counts.slice(0,15);
+
+  const total=
+    sum(counts.map(x=>x[1]));
+
+  let run=0;
+
+  const cum=
+    top.map(
+      x=>(
+        run+=x[1],
+        total?
+        +(run/total*100).toFixed(1):
+        0
+      )
+    );
+
+  destroyChart("pareto");
+
+  const labels=
+    top.map(
+      x=>shortText(x[0],22)
+    );
+
+  const rawLabels=
+    top.map(x=>x[0]);
+
+
+  state.charts.pareto=
+    new Chart(
+      $("paretoChart"),
+      {
+
+        data:{
+          labels,
+
+          datasets:[
+
+            {
+              type:"bar",
+
+              label:"Defects",
+
+              data:
+                top.map(x=>x[1]),
+
+              backgroundColor:ctx=>{
+
+                const t=
+                  sum(
+                    top.map(x=>x[1])
+                  );
+
+                return severityColor(
+                  t?
+                  ctx.raw/t*100:
+                  0,
+                  .88
+                );
+
+              },
+
+              borderColor:ctx=>{
+
+                const t=
+                  sum(
+                    top.map(x=>x[1])
+                  );
+
+                return severityColor(
+                  t?
+                  ctx.raw/t*100:
+                  0,
+                  1
+                );
+
+              },
+
+              borderWidth:1,
+              borderRadius:7,
+              yAxisID:"y"
+
+            },
+
+            {
+
+              type:"line",
+
+              label:"Cumulative %",
+
+              data:cum,
+
+              borderColor:"#f0c36b",
+              backgroundColor:"#f0c36b",
+              pointBackgroundColor:"#f0c36b",
+              pointRadius:3,
+              tension:.3,
+              yAxisID:"y1"
+
+            }
+
+          ]
+
+        },
+
+        options:{
+
+          responsive:true,
+          maintainAspectRatio:false,
+
+          onClick:
+            chartClickHandler(
+              "defect",
+              rawLabels
+            ),
+
+          onHover:(e,els)=>{
+
+            e.native.target.style.cursor=
+              els.length?
+              "pointer":
+              "default";
+
+          },
+
+          plugins:{
+
+            legend:{
+              labels:{
+                color:"#aaa9a4",
+                font:{size:9},
+                boxWidth:9
+              }
+            },
+
+            tooltip:{
+
+              ...baseTooltip(),
+
+              callbacks:{
+
+                label:ctx=>{
+
+                  if(
+                    ctx.dataset.label===
+                    "Cumulative %"
+                  ){
+
+                    return ` Cumulative: ${
+                      Number(ctx.raw).toFixed(1)
+                    }%`;
+
+                  }
+
+                  return ` Defects: ${
+                    Number(ctx.raw)
+                      .toLocaleString()
+                  } (${
+                    (
+                      Number(ctx.raw)/
+                      total*100
+                    ).toFixed(1)
+                  }%) • ${
+                    severityForPct(
+                      Number(ctx.raw)/
+                      total*100
+                    ).label
+                  }`;
+
+                }
+
+              }
+
+            }
+
+          },
+
+          scales:{
+
+            x:{
+              ticks:{
+                color:"#8e908b",
+                font:{size:8},
+                maxRotation:55,
+                minRotation:35
+              },
+              grid:{
+                color:chartBase.gridColor
+              }
+            },
+
+            y:{
+              beginAtZero:true,
+              ticks:{
+                color:"#8e908b",
+                font:{size:9}
+              },
+              grid:{
+                color:chartBase.gridColor
+              }
+            },
+
+            y1:{
+              beginAtZero:true,
+              max:100,
+              position:"right",
+
+              ticks:{
+                color:"#8e908b",
+                font:{size:9},
+                callback:v=>v+"%"
+              },
+
+              grid:{
+                drawOnChartArea:false
+              }
+
+            }
+
+          }
+
+        }
+
+      }
+    );
+
+}
+
+
+/* DPU */
+
+function renderDpu(rows){
+
+  const days={};
+
+  rows.forEach(r=>{
+
+    if(!r.__date)return;
+
+    const k=r.__dateISO;
+
+    days[k]??={
+      defects:0,
+      chassis:new Set()
+    };
+
+    days[k].defects++;
+
+    if(r.__chassis)
+      days[k].chassis.add(
+        r.__chassis
+      );
+
+  });
+
+
+  const e=
+    Object.entries(days)
+      .sort(
+        (a,b)=>
+          a[0].localeCompare(b[0])
+      );
+
+
+  const labels=
+    e.map(([k])=>{
+
+      const d=parseDate(k);
+
+      return `${
+        String(
+          d.getMonth()+1
+        ).padStart(2,"0")
+      }/${
+        String(
+          d.getDate()
+        ).padStart(2,"0")
+      }`;
+
+    });
+
+
+  const vals=
+    e.map(
+      ([,v])=>
+        v.chassis.size?
+        v.defects/v.chassis.size:
+        0
+    );
+
+
+  makeBar(
+    "dpu",
+    "dpuChart",
+    labels,
+    vals,
+    {
+      label:"DPU",
+      filterKey:"date",
+      filterValues:e.map(
+        ([k])=>k
+      )
+    }
+  );
+
+}
+
+
+/* DAILY */
+
+function renderDaily(rows){
+
+  const days={};
+
+  rows.forEach(r=>{
+
+    if(!r.__date)return;
+
+    const k=r.__dateISO;
+
+    days[k]??={
+      defects:0,
+      chassis:new Set()
+    };
+
+    days[k].defects++;
+
+    if(r.__chassis)
+      days[k].chassis.add(
+        r.__chassis
+      );
+
+  });
+
+
+  const e=
+    Object.entries(days)
+      .sort(
+        (a,b)=>
+          a[0].localeCompare(b[0])
+      );
+
+
+  const labels=
+    e.map(([k])=>{
+
+      const d=parseDate(k);
+
+      return `${
+        String(
+          d.getMonth()+1
+        ).padStart(2,"0")
+      }/${
+        String(
+          d.getDate()
+        ).padStart(2,"0")
+      }`;
+
+    });
+
+
+  const defects=
+    e.map(([,v])=>v.defects);
+
+  const prod=
+    e.map(([,v])=>v.chassis.size);
+
+
+  destroyChart("daily");
+
+
+  state.charts.daily=
+    new Chart(
+      $("dailyChart"),
+      {
+
+        type:"bar",
+
+        data:{
+          labels,
+
+          datasets:[
+
+            {
+              label:"Defects",
+              data:defects,
+
+              backgroundColor:ctx=>{
+
+                const t=sum(defects);
+
+                return severityColor(
+                  t?
+                  ctx.raw/t*100:
+                  0,
+                  .88
+                );
+
+              },
+
+              borderRadius:7
+
+            },
+
+            {
+              label:"Productivity",
+              data:prod,
+
+              backgroundColor:ctx=>{
+
+                const t=sum(prod);
+
+                return severityColor(
+                  t?
+                  ctx.raw/t*100:
+                  0,
+                  .62
+                );
+
+              },
+
+              borderRadius:7
+
+            }
+
+          ]
+
+        },
+
+        options:{
+
+          ...chartOptions(),
+
+          onClick:
+            chartClickHandler(
+              "date",
+              e.map(([k])=>k)
+            ),
+
+          onHover:(ev,els)=>{
+
+            ev.native.target.style.cursor=
+              els.length?
+              "pointer":
+              "default";
+
+          }
+
+        }
+
+      }
+    );
+
+}
+
+
+/* PROCESS */
+
+function renderProcess(counts){
+
+  makeDoughnut(
+    "process",
+    "processChart",
+    counts.map(x=>x[0]),
+    counts.map(x=>x[1]),
+    "process",
+    counts.map(x=>x[0])
+  );
+
+}
+
+
+function renderProcessList(
+  counts,
+  total
+){
+
+  const el=$("processList");
+
+  el.innerHTML="";
+
+  if(!counts.length){
+
+    el.innerHTML=
+      '<div class="empty">No process data for this selection.</div>';
+
+    return;
+
+  }
+
+
+  counts.forEach(
+    ([name,count])=>{
+
+      const pct=
+        total?
+        count/total*100:
+        0;
+
+      const row=
+        document.createElement("div");
+
+      row.className="process-row";
+
+      row.title=
+        `${severityForPct(pct).label} — Click to filter`;
+
+      row.addEventListener(
+        "click",
+        ()=>setChartFilter(
+          "process",
+          name
+        )
+      );
+
+
+      row.innerHTML=`
+
+        <div class="process-name">
+          ${escapeHtml(name)}
+        </div>
+
+        <div class="bar">
+
+          <span
+            style="
+              width:${pct}%;
+              background:${severityColor(pct,.9)}
+            "
+          ></span>
+
+        </div>
+
+        <div class="process-value">
+          ${count} · ${pct.toFixed(1)}%
+        </div>
+
+      `;
+
+      el.appendChild(row);
+
+    }
+  );
+
+}
+
+
+/* PROCESS CHARTS */
+
+function renderProcessCharts(rows){
+
+  [
+    [
+      "Surface",
+      "surface",
+      "surfaceChart"
+    ],
+
+    [
+      "Spot",
+      "spot",
+      "spotChart"
+    ],
+
+    [
+      "Sealer&Co2",
+      "sealer",
+      "sealerChart"
+    ]
+
+  ].forEach(
+    ([pn,cn,canvas])=>{
+
+      const c=
+        groupCount(
+          rows.filter(
+            r=>r.__process===pn
+          ),
+          r=>r.__defect
+        ).slice(0,8);
+
+
+      makeBar(
+        cn,
+        canvas,
+        c.map(
+          x=>shortText(x[0],18)
+        ),
+        c.map(x=>x[1]),
+        {
+          filterKey:"defect",
+          filterValues:
+            c.map(x=>x[0])
+        }
+      );
+
+    }
+  );
+
+}
+
+
+/* ==========================================================
+   UPDATED BODY MAP
+   ==========================================================
+
+   16 COLUMNS:
+   A B C D E F G H I J K L M N O P
+
+   14 ROWS:
+   1 2 3 4 5 6 7 8 9 10 11 12 13 14
+
+   ORIGIN:
+   TOP LEFT = A1
+
+   The nested loops are deliberately:
+
+      row = 1 -> 14
+      col = A -> P
+
+   This guarantees:
+      first cell = A1
+      second cell = B1
+      ...
+      last cell of first row = P1
+      next row starts = A2
+   ========================================================== */
+
+function renderMap(rows){
+
+  const counts={};
+
+
+  rows.forEach(r=>{
+
+    if(r.__location){
+
+      counts[r.__location]=
+        (counts[r.__location]||0)+1;
+
+    }
+
+  });
+
+
+  const max=
+    Math.max(
+      1,
+      ...Object.values(counts)
+    );
+
+
+  const grid=$("mapGrid");
+
+  grid.innerHTML="";
+
+
+  const letters=
+    "ABCDEFGHIJKLMNOP".split("");
+
+
+  /*
+    14 ROWS
+    16 COLUMNS
+  */
+
+  for(
+    let row=1;
+    row<=14;
+    row++
+  ){
+
+    for(
+      let col=0;
+      col<16;
+      col++
+    ){
+
+      /*
+        TOP-LEFT ORIGIN
+
+        col 0 = A
+        col 1 = B
+        ...
+        col 15 = P
+      */
+
+      const loc=
+        `${letters[col]}${row}`;
+
+      const count=
+        counts[loc]||0;
+
+
+      /*
+        Percentage is based on the
+        highest occupied cell in the
+        current filtered dataset.
+      */
+
+      const pct=
+        count?
+        count/max*100:
+        0;
+
+
+      const cell=
+        document.createElement("div");
+
+      cell.className="map-cell";
+
+
+      /*
+        NORMAL
+        HIGH
+        CRITICAL
+      */
+
+      cell.style.background=
+        count?
+        severityColor(pct,.82):
+        "transparent";
+
+
+      cell.style.borderColor=
+        count?
+        severityColor(pct,.55):
+        "rgba(255,255,255,.05)";
+
+
+      /*
+        Interactive tooltip
+      */
+
+      cell.title=
+        `${loc}: ${
+          count
+        } defect${
+          count===1?"":"s"
+        } • ${
+          severityForPct(pct).label
+        }`;
+
+
+      if(count){
+
+        cell.style.cursor="pointer";
+
+        cell.addEventListener(
+          "click",
+          ()=>setChartFilter(
+            "location",
+            loc
+          )
+        );
+
+      }
+
+
+      cell.innerHTML=`
+
+        <span>
+          ${loc}
+          <br>
+          ${count}
+        </span>
+
+      `;
+
+
+      grid.appendChild(cell);
+
+    }
+
+  }
+
+}
+
+
+/* LOCATION TABLE */
+
+function renderLocationTable(rows){
+
+  const map=new Map();
+
+
+  rows.forEach(r=>{
+
+    if(!r.__location)return;
+
+    const key=
+      `${r.__location}|||${r.__process}|||${r.__defect}`;
+
+    map.set(
+      key,
+      (map.get(key)||0)+1
+    );
+
+  });
+
+
+  const items=
+    [...map.entries()]
+      .map(
+        ([key,count])=>{
+
+          const[
+            location,
+            process,
+            defect
+          ]=
+            key.split("|||");
+
+          return{
+            location,
+            process,
+            defect,
+            count
+          };
+
+        }
+      )
+      .sort(
+        (a,b)=>b.count-a.count
+      )
+      .slice(0,30);
+
+
+  const total=rows.length;
+
+  const tbody=
+    $("locationTable");
+
+  tbody.innerHTML="";
+
+
+  if(!items.length){
+
+    tbody.innerHTML=
+      `<tr>
+        <td colspan="5">
+          No location data for this selection.
+        </td>
+      </tr>`;
+
+    return;
+
+  }
+
+
+  items.forEach(i=>{
+
+    const pct=
+      total?
+      i.count/total*100:
+      0;
+
+
+    const tr=
+      document.createElement("tr");
+
+    tr.style.cursor="pointer";
+
+    tr.title=
+      `${severityForPct(pct).label} — Click to filter`;
+
+
+    tr.addEventListener(
+      "click",
+      ()=>setChartFilter(
+        "location",
+        i.location
+      )
+    );
+
+
+    tr.innerHTML=`
+
+      <td>
+        <span class="badge">
+          ${escapeHtml(i.location)}
+        </span>
+      </td>
+
+      <td>
+        ${escapeHtml(i.process)}
+      </td>
+
+      <td>
+        ${escapeHtml(
+          shortText(i.defect,42)
+        )}
+      </td>
+
+      <td>
+        ${i.count}
+      </td>
+
+      <td>
+        ${pct.toFixed(1)}%
+      </td>
+
+    `;
+
+
+    tbody.appendChild(tr);
+
+  });
+
+}
+
+
+/* INSIGHTS */
+
+function renderInsights(
+  rows,
+  pc,
+  dc,
+  dpu
+){
+
+  const el=$("insights");
+
+  el.innerHTML="";
+
+
+  if(!rows.length){
+
+    el.innerHTML=`
+      <div class="insight">
+
+        <div class="insight-tag">
+          Status
+        </div>
+
+        <strong>
+          No filtered data
+        </strong>
+
+        <p>
+          Adjust the filters to generate
+          management insights.
+        </p>
+
+      </div>
+    `;
+
+    return;
+
+  }
+
+
+  const topP=pc[0];
+  const topD=dc[0];
+  const second=dc[1];
+
+
+  const loc=
+    groupCount(
+      rows,
+      r=>r.__location
+    )
+    .filter(
+      x=>x[0]&&x[0]!=="Unknown"
+    )[0];
+
+
+  const arr=[
+
+    {
+      tag:"Priority",
+
+      title:
+        `${topD[0]} is the leading defect`,
+
+      text:
+        `It represents ${
+          (topD[1]/rows.length*100)
+          .toFixed(1)
+        }% of current records.`
+    },
+
+
+    {
+      tag:"Process",
+
+      title:
+        `${topP[0]} carries the highest share`,
+
+      text:
+        `${topP[1]} defects are currently classified under this process.`
+    },
+
+
+    {
+      tag:"Location",
+
+      title:
+        loc?
+        `${loc[0]} is the busiest location`:
+        "Location data is limited",
+
+      text:
+        loc?
+        `${loc[1]} defect records are mapped to this body-grid location.`:
+        "No usable defect-location values were found."
+    },
+
+
+    {
+      tag:"DPU",
+
+      title:
+        `Current DPU is ${dpu.toFixed(2)}`,
+
+      text:
+        "DPU is calculated as filtered defect records divided by unique chassis."
+    },
+
+
+    {
+      tag:"Concentration",
+
+      title:
+        second?
+        `${topD[0]} + ${second[0]}`:
+        "Top-defect concentration",
+
+      text:
+        second?
+        `Together they represent ${
+          (
+            (topD[1]+second[1])/
+            rows.length*100
+          ).toFixed(1)
+        }% of current records.`:
+        "Only one defect category is available."
+    },
+
+
+    {
+      tag:"Scope",
+
+      title:
+        `${uniqueCount(
+          rows,
+          "__chassis"
+        ).toLocaleString()} chassis analyzed`,
+
+      text:
+        `${rows.length.toLocaleString()} filtered defect records.`
+    }
+
+  ];
+
+
+  arr.forEach(i=>{
+
+    const d=
+      document.createElement("div");
+
+    d.className="insight";
+
+
+    d.innerHTML=`
+
+      <div class="insight-tag">
+        ${escapeHtml(i.tag)}
+      </div>
+
+      <strong>
+        ${escapeHtml(i.title)}
+      </strong>
+
+      <p>
+        ${escapeHtml(i.text)}
+      </p>
+
+    `;
+
+
+    el.appendChild(d);
+
+  });
+
+}
+
+
+/* LOAD EXCEL */
+
+async function loadWorkbook(file){
+
+  try{
+
+    const buffer=
+      await file.arrayBuffer();
+
+
+    const workbook=
+      XLSX.read(
+        buffer,
+        {
+          type:"array",
+          cellDates:true
+        }
+      );
+
+
+    let selectedSheet=null;
+    let selectedRows=null;
+
+
+    for(
+      const sheetName of workbook.SheetNames
+    ){
+
+      const ws=
+        workbook.Sheets[sheetName];
+
+      const rows=
+        XLSX.utils.sheet_to_json(
+          ws,
+          {defval:""}
+        );
+
+
+      if(!rows.length)
+        continue;
+
+
+      const headers=
+        Object.keys(rows[0])
+          .map(normalizeKey);
+
+
+      if(
+        headers.includes("defectcode")&&
+        headers.includes("date")
+      ){
+
+        selectedSheet=sheetName;
+        selectedRows=rows;
+
+        break;
+
+      }
+
+    }
+
+
+    if(!selectedRows){
+
+      throw new Error(
+        "No valid sheet found. The workbook must contain Defect Code and Date columns."
+      );
+
+    }
+
+
+    state.raw=
+      buildDataObjects(
+        prepareRows(selectedRows)
+      );
+
+
+    state.fileName=
+      file.name;
+
+
+    if(!state.raw.length){
+
+      throw new Error(
+        "The selected sheet contains no usable rows."
+      );
+
+    }
+
+
+    state.chartFilter=null;
+
+
+    populateFilters();
+
+    applyFilters();
+
+
+    const dates=
+      state.raw
+        .map(r=>r.__date)
+        .filter(Boolean);
+
+
+    const min=
+      dates.reduce(
+        (a,b)=>a<b?a:b
+      );
+
+    const max=
+      dates.reduce(
+        (a,b)=>a>b?a:b
+      );
+
+
+    $("reportSubtitle").textContent=
+      `${file.name} · ${selectedSheet} · ${formatDate(min)} — ${formatDate(max)}`;
+
+
+    $("dataStatus").textContent=
+      `Loaded ${state.raw.length.toLocaleString()} rows`;
+
+
+    showToast(
+      `Excel loaded: ${state.raw.length.toLocaleString()} rows`
+    );
+
+
+  }catch(err){
+
+    console.error(err);
+
+    showToast(
+      err.message||
+      "Could not read the Excel file."
+    );
+
+    $("dataStatus").textContent=
+      "Load error";
+
+  }
+
+}
+
+
+/* EVENTS */
+
+$("excelInput").addEventListener(
+  "change",
+  e=>{
+
+    const f=
+      e.target.files?.[0];
+
+    if(f)
+      loadWorkbook(f);
+
+  }
+);
+
+
+$("applyBtn").addEventListener(
+  "click",
+  ()=>{
+
+    state.chartFilter=null;
+
+    applyFilters();
+
+  }
+);
+
+
+$("resetBtn").addEventListener(
+  "click",
+  ()=>{
+
+    if(!state.raw.length)return;
+
+    state.chartFilter=null;
+
+    populateFilters();
+
+    $("processFilter").value="";
+    $("defectFilter").value="";
+    $("jobFilter").value="";
+    $("chassisFilter").value="";
+
+    applyFilters();
+
+    showToast(
+      "All filters reset"
+    );
+
+  }
+);
+
+
+$("chassisFilter").addEventListener(
+  "keydown",
+  e=>{
+
+    if(e.key==="Enter")
+      applyFilters();
+
+  }
+);
+
+
+/* BODY MAP UPLOAD */
+
+$("mapInput").addEventListener(
+  "change",
+  e=>{
+
+    const f=
+      e.target.files?.[0];
+
+    if(!f)return;
+
+    $("bodyMap").src=
+      URL.createObjectURL(f);
+
+    showToast(
+      "Body map image loaded"
+    );
+
+  }
+);
+
+
+/* SIDEBAR NAVIGATION */
+
+document
+  .querySelectorAll(".nav button")
+  .forEach(btn=>{
+
+    btn.addEventListener(
+      "click",
+      ()=>{
+
+        document
+          .querySelectorAll(".nav button")
+          .forEach(
+            b=>b.classList.remove("active")
+          );
+
+        btn.classList.add("active");
+
+
+        const target=
+          $(btn.dataset.target);
+
+
+        if(target){
+
+          target.scrollIntoView({
+            behavior:"smooth",
+            block:"start"
+          });
+
+        }
+
+      }
+    );
+
+  });
+
+
+/* INITIAL EMPTY MAP */
+
+renderMap([]);
+
+</script>
+
+</body>
+</html>
